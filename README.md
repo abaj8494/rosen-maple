@@ -15,5 +15,5 @@ I then cleaned up this file with **Vim** macros, leaving only the precious proce
 
 Now, as I can find no way to import these procedures into the Maple commandline I have opted to leverage some unix pipe wizardry to access these procedures with:
 ```sh
-(cat rosen.txt; cat;) | maple
+(cat proc.txt; cat;) | maple
 ```
