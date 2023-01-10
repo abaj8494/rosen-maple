@@ -2,7 +2,7 @@ Hi,
 
 This is a repo containing Daniel R. Jordan's Maple Manual for Ken Rosen's __Discrete Mathematics and its Applications__.
 
-The originals can be found (here)[https://google.com].
+The originals can be found [here](https://highered.mheducation.com/sites/125967651x/student_view0/exploring_discrete_mathematics_using_maple.html).
 
 None of this is my own work, I just wanted to be able to wget the list of procedures in `rosen.txt` from a foreign machine.
 
