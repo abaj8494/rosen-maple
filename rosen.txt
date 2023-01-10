@@ -1,0 +1,2569 @@
+MySum := proc(a,b)
+    a + b;
+end proc;
+newMySum := proc(a::integer,b::integer)
+    a + b;
+end proc:
+Alg1 := proc(a::numeric)
+    global w;
+    local x;
+    if a < 1 then
+        x := 1;
+    else
+        x := 2;
+    end if;
+    w := x + 10;
+    return w;
+end proc:
+Alg2 := proc(a::numeric)
+    local x, y;
+    if a > 0 then
+        x := sqrt(a);
+        y := a^2;
+    else
+        x := sqrt(-a);
+        y := -a^2;
+    end if;
+    a := x + y;
+    return (a);
+end proc:
+Alg3 := proc(a::numeric)
+    if a > 0 then
+        return NULL;
+    else
+        return FAIL;
+    end if;
+    a := sqrt(a);
+end proc:
+Avg3 := proc(a::numeric,b::numeric,c::numeric)
+    local m;
+    uses Statistics;
+    m := Mean([a,b,c]);
+    return m;
+end proc:
+IfProc1 := proc(x)
+    local y;
+    y := x;
+    if y <= 5 then
+        y := y + 1;
+    else
+        y := y - 1;
+    end if;
+    return y;
+end proc;
+AND := proc(a,b)
+    if a=1 and b=1 then
+        return 1;
+    else
+        return 0;
+    end if;
+end proc:
+AND := proc(A,B)
+    local i, maxlen, newA, newB;
+    if (A=0 or A=1) and (B=0 or B=1) then
+        if A=1 and B=1 then
+            return 1;
+        else
+            return 0;
+        end if;
+    elif type(A,list) and type(B,list) then
+        maxlen := max(nops(A),nops(B));
+        newA := [seq(0,i=1..maxlen-nops(A)),op(A)];
+        newB := [seq(0,i=1..maxlen-nops(B)),op(B)];
+        return zip(AND,newA,newB);
+    else
+        error "Only bits and bit strings are allowed.";
+    end if;
+end proc:
+GetVars := proc(exp)
+    local L, i, j;
+    L := [exp];
+    i := 1;
+    while i <= nops(L) do
+        if type(L[i],name) then
+            i := i + 1;
+        else
+            L := subsop(i=op(L[i]),L);
+        end if;
+    end do;
+    return [op({op(L)})];
+end proc:
+NextTA := proc(A)
+    local i, new;
+    new := A;
+    for i from 1 to nops(A) do
+        if new[i] then
+            new[i] := false;
+        else
+            new[i] := true;
+            return new;
+        end if;
+    end do;
+    return NULL;
+end proc:
+AreEquivalent := proc(P,Q)
+    local eqZip, Bicond, Vars, numVars, i, TA, val;
+    eqZip := (a,b) -> a=b;
+    Bicond := (P implies Q) and (Q implies P);
+    Vars := GetVars(Bicond);
+    numVars := nops(Vars);
+    TA := [seq(false,i=1..numVars)];
+    while TA <> NULL do
+        val := eval(Bicond,zip(eqZip,Vars,TA));
+        if not val then
+            return false;
+        end if;
+        TA := NextTA(TA);
+    end do;
+    return true;
+end proc:
+nQueens1 := ptmp:
+nQueens2 := ptmp:
+nQueens3 := ptmp:
+nQueens4 := ptmp:
+nQueens5 := ptmp:
+nQueens := proc(n)
+    local prop;
+    prop := nQueens1(n) and nQueens2(n) and nQueens3(n) and nQueens4(n) and nQueens5(n);
+    if not Logic[Satisfiable](prop) then
+        return false;
+    else
+        return Logic[Satisfy](prop);
+    end if;
+end proc:
+Universal := proc(P,D)
+    local d;
+    for d in D do
+        if not P(d) then
+            return false;
+        end if;
+    end do;
+    return true;
+end proc:
+Existential := proc(P,D)
+    local d;
+    for d in D do
+        if P(d) then
+            return true;
+        end if;
+    end do;
+    return false;
+end proc:
+ExistsForAll := proc(P,D)
+    local x, y, yworks;
+    for y in D do
+        yworks := true;
+        for x in D do
+            if not P(x,y) then
+                yworks := false;
+                break;
+            end if;
+        end do;
+        if yworks then
+            return true;
+        end if;
+    end do;
+    return false;
+end proc:
+IsValid := proc(L::list)	
+    local premises, i;
+    premises := L[1];
+    for i from 2 to nops(L)-1 do
+        premises := premises and L[i];
+    end do;
+    Logic[Implies](premises,L[-1]);
+end proc:
+AllCompound := proc(L)
+    local p, q, tempL, PropList;
+    PropList := [];
+    tempL := L;
+    for p in L do
+        tempL := [op(tempL),not p];
+    end do;
+    for p in tempL do
+        for q in tempL do
+            if not Logic[Equivalent](p and q,true) and not Logic[Equivalent](p and q,false) then
+                PropList := [op(PropList),p and q];
+            end if;
+            if not Logic[Equivalent](p or q,true) and not Logic[Equivalent](p or q,false) then
+                PropList := [op(PropList),p or q];
+            end if;
+            if not Logic[Equivalent](p implies q,true) and not Logic[Equivalent](p implies q,false) then
+                PropList := [op(PropList),p implies q];
+            end if;
+        end do;
+    end do;
+    return [op({op(PropList)})];
+end proc:
+FindConsequences := proc(Premises,level)
+    local Vars, possibleC, C, c, P, i;
+    Vars := GetVars(Premises);
+    possibleC := Vars;
+    for i from 1 to level do
+        possibleC := AllCompound(possibleC);
+    end do;
+    C := [];
+    P := Premises[1];
+    for i from 2 to nops(Premises) do
+        P := P and Premises[i];
+    end do;
+    for c in possibleC do
+        if Logic[Implies](P,c) then
+            C := [op(C),c];
+        end if;
+    end do;
+    return C;
+end proc:
+Find3Squares := proc(n)
+    local a, b, c, max;
+    max := floor(sqrt(n));
+    for a from 0 to max do
+        for b from 0 to max do
+            for c from 0 to max do
+                if n = a^2 + b^2 + c^2 then
+                    return [a,b,c];
+                end if;
+            end do;
+        end do;
+    end do;
+    return false;
+end proc:
+Find3Counter := proc()
+    local n;
+    n := 1;
+    while Find3Squares(n) <> false do
+        n := n + 1;
+    end do;
+    return n;
+end proc:
+FindPowers := proc(n::posint)
+    local L, b, p, continuep, continueb;
+    L := [];
+    p := 2;
+    continuep := true;
+    while continuep do
+        b := 1;
+        continueb := true;
+        while continueb do
+            if b^p > n then
+                continueb := false;
+            else
+                L := [op(L),b^p];
+                b := b + 1;
+            end if;
+        end do;
+        p := p + 1;
+        if 2^p > n then
+            continuep := false;
+        end if;
+    end do;
+    return {op(L)};
+end proc:
+FindConsecutivePowers := proc(n)
+    local powers, x;
+    powers := FindPowers(n);
+    for x in powers do
+        if x + 1 in powers then
+            print(x,x+1);
+        end if;
+    end do;
+    return NULL;
+end proc:
+TwoCubes := proc()
+    local L, a, b, n;
+    L := [];
+    a := 1;
+    while true do
+        for b from 1 to a do
+            n := a^3 + b^3;
+            if n in L then
+                return n;
+            else
+                L := [op(L),n];
+            end if;
+        end do;
+        a := a + 1;
+    end do;
+end proc:
+IsSatisfiable := proc(P)
+    local eqZip, Vars, numVars, i, TA, val, TAeqns, result;
+    result := false;
+    eqZip := (a,b) -> a=b;
+    Vars := GetVars(P);
+    numVars := nops(Vars);
+    TA := [seq(false,i=1..numVars)];
+    while TA <> NULL do
+        TAeqns := zip(eqZip,Vars,TA);
+        val := eval(P,TAeqns);
+        if val then
+            result := true;
+            print(TAeqns);
+        end if;
+        TA := NextTA(TA);
+    end do;
+    return result;
+end proc:
+AllPairSums := proc(L, max)
+    local a, b, s, sums, num;
+    sums := [];
+    num := nops(L);
+    a := 1;
+    while a <= num do
+        b := a;
+        while b <= num do
+            s := L[a] + L[b];
+            if s <= max then
+                sums := [op(sums),s];
+            else
+                b := num;
+            end if;
+            b := b + 1;
+        end do;
+        a := a + 1;
+    end do;
+    return [op({op(sums)})];
+end proc:
+selfSize := proc()
+    local onetofive, pSet, S, n;
+    onetofive := {seq(1..5)};
+    pSet := combinat[subsets](onetofive);
+    while not pSet[finished] do
+        S := pSet[nextvalue]();
+        if nops(S) in S then
+            print(S);
+        end if;
+    end do;
+end proc:
+tenSquares := proc()
+    local S, i;
+    S := {};
+    for i from 1 to 10 do
+        S := S union {i^2};
+    end do;
+    return S;
+end proc:
+GetVars := proc(exp)
+    local L, i, j;
+    L := [exp];
+    i := 1;
+    while i <= nops(L) do
+        if type(L[i],name) then
+            i := i + 1;
+        else
+            L := subsop(i=op(L[i]),L);
+        end if;
+    end do;
+    L := {op(L)} minus {U};
+    return [op(L)];
+end proc:
+MemberTable := proc(identity)
+    local vars, numvars, cartesian, setList, rowNum, curTuple, vI, Universe, eqns, U;
+    vars := GetVars(identity);
+    numvars := nops(vars);
+    cartesian := combinat[cartprod]([seq({0,1},i=1..numvars)]);
+    setList := [seq({},i=1..numvars)];
+    rowNum := 0;
+    while not cartesian[finished] do
+        rowNum := rowNum + 1;
+        curTuple := cartesian[nextvalue]();
+        for vI from 1 to numvars do
+            if curTuple[vI] = 1 then
+                setList[vI] := setList[vI] union {rowNum};
+            end if;
+        end do;
+    end do;
+    Universe := {seq(i,i=1..rowNum)};
+    eqns := zip((a,b) -> a=b, vars, setList);
+    eqns := [op(eqns),U=Universe];
+    return evalb(eval(identity,eqns));
+end proc:
+BitToRoster := proc(bitstring,universe)
+    local S, i;
+    S := {};
+    for i from 1 to nops(universe) do
+        if bitstring[i] <> 0 then
+            S := S union {[universe[i],bitstring[i]]};
+        end if;
+    end do;
+    return S;
+end proc:
+RosterToBit := proc(roster,universe)
+    local B, i, e, pos;
+    B := [seq(0,i=1..nops(universe))];
+    for e in roster do
+        if member(e[1],universe,'pos') then
+            B[pos] := e[2];
+        else
+            error "Roster contained a member not in the universe.";
+        end if;
+    end do;
+    return B;
+end proc:
+Floor1 := proc(x::float)::integer;
+    return floor(x);
+end proc:
+loopy := proc(n::posint)
+    local m;
+    m := n;
+    while m <> 0 do
+        print(m);
+        m := m - 1;
+    end do;
+end proc:
+Floor2 := proc(x::{float,integer})
+    return floor(x);
+end proc:
+Floor3 := proc(L::list)
+    return map(floor,L);
+end proc:
+Floor4 := proc(L::list({float,integer}))
+    return map(floor,L);
+end proc:
+Floor := proc(v::{numeric,list(numeric)})
+    if type(v,numeric) then
+        return floor(v);
+    else
+        return map(floor,v);
+    end if;
+end proc:
+FindDomain := proc(T::table)
+    return {indices(T,'nolist')};
+end proc:
+FindRange := proc(T::table)
+    return {entries(T,'nolist')};
+end proc:
+IsOnto := proc(T::table,codomain::set)
+    return evalb(FindRange(T) = codomain);
+end proc:
+IsOnetoOne := proc(T::table)
+    return evalb(nops(FindDomain(T))=nops(FindRange(T)));
+end proc:
+GeometricSeq := proc(a,r,n)
+    local S, i;
+    S := NULL;
+    for i from 0 to n do
+        S := S,a*r^i;
+    end do;
+    return S;
+end proc:
+Fib2 := proc(n::posint)
+    option remember;
+    if n <= 2 then
+        return 1;
+    else
+        return Fib2(n-1) + Fib2(n-2);
+    end if;
+end proc:
+ListRationals := proc(max::posint)
+    local L, n, p, q;
+    L := [];
+    for n from 2 to max do
+        for q from 1 to n-1 do
+            p := n-q;
+            if not(p/q in L) then
+                L := [op(L),p/q];
+            end if;
+        end do;
+    end do;
+    return L;
+end proc:
+LocateRational := proc(r::rational)
+    local stage, L, i;
+    if r <= 0 then
+        error "Input value must be positive.";
+    end if;
+    stage := numer(r) + denom(r);
+    L := ListRationals(stage);
+    for i from nops(L) to 1 by -1 do
+        if L[i] = r then
+            return i;
+        end if;
+    end do;
+end proc:
+BoolJoin := proc(A::'Matrix'({0,1}),B::'Matrix'({0,1}))
+    local numrows, numcols, R, r, c;
+    uses LinearAlgebra, Bits;
+    numrows := RowDimension(A);
+    numcols := ColumnDimension(A);
+    if numrows <> RowDimension(B) or numcols <> ColumnDimension(B) then
+        error "Input matrices must be of the same size.";
+    end if;
+    R := Matrix(numrows,numcols);
+    for r from 1 to numrows do
+        for c from 1 to numcols do
+            R[r,c] := Or(A[r,c],B[r,c]);
+        end do;
+    end do;
+    return R;
+end proc:
+BoolProduct := proc(A::'Matrix'({0,1}),B::'Matrix'({0,1}))
+    local m, k, n, C, i, j, c, p;
+    uses LinearAlgebra, Bits;
+    m := RowDimension(A);
+    k := ColumnDimension(A);
+    if k <> RowDimension(B) then
+        error "Dimension mismatch.";
+    end if;
+    n := ColumnDimension(B);
+    C := Matrix(m,n);
+    for i from 1 to m do
+        for j from 1 to n do
+            c := And(A[i,1],B[1,j]);
+            for p from 2 to k do
+                c := Or(c,And(A[i,p],B[p,j]));
+            end do;
+            C[i,j] := c;
+        end do;
+    end do;
+    return C;
+end proc:
+FuzzyUnion := proc(A,B)
+    local U, e, Abits, Bbits, Cbits, C;
+    U := {};
+    for e in A do
+        U := U union {e[1]};
+    end do;
+    for e in B do
+        U := U union {e[1]};
+    end do;
+    Abits := RosterToBit(A,U);
+    Bbits := RosterToBit(B,U);
+    Cbits := zip(max,Abits,Bbits);
+    C := BitToRoster(Cbits,U);
+    return C;
+end proc:
+IsSymmetric := proc(M::Matrix)
+    LinearAlgebra[Equal](M,LinearAlgebra[Transpose](M));
+end proc:
+NextBitS := proc(BitS::list({0,1}))
+    local newBitS, i;
+    newBitS := BitS;
+    for i from 1 to nops(newBitS) do
+        if newBitS[i] = 1 then
+            newBitS[i] := 0;
+        else
+            newBitS[i] := 1;
+            return newBitS;
+        end if;
+    end do;
+    return NULL;
+end proc:
+BitToSubset := proc(BitS::list({0,1}),S::set)
+    local subS, i;
+    subS := {};
+    for i from 1 to nops(BitS) do
+        if BitS[i] = 1 then
+            subS := subS union {S[i]};
+        end if;
+    end do;
+    return subS;
+end proc:
+Subsets := proc(S::set)
+    local BitS;
+    BitS := [0 $ nops(S)];
+    while BitS <> NULL do
+        print(BitToSubset(BitS,S));
+        BitS := NextBitS(BitS);
+    end do;
+    return NULL;
+end proc:
+IsDivisor := proc(a::integer, b::integer)
+    return evalb(irem(b,a) = 0);
+end proc:
+Addition := proc(a::list({0,1}), b::list({0,1}))
+    local n, A, B, S, c, j, d;
+    n := max(nops(a),nops(b));
+    A := [op(a), 0 $ (n-nops(a))];
+    B := [op(b), 0 $ (n-nops(b))];
+    S := [0 $ n+1];
+    c := 0;
+    for j from 1 to n do
+        d := floor((A[j]+B[j]+c)/2);
+        S[j] := A[j] + B[j] + c - 2*d;
+        c := d;
+    end do;
+    S[n+1] := c;
+    return S;
+end proc:
+Multiplication := proc(a::list({0,1}), b::list({0,1}))
+    local j, C, p;
+    C := table();
+    for j from 1 to nops(b) do
+        if b[j] = 1 then
+            C[j] := [ 0 $ (j-1), op(a) ];
+        else
+            C[j] := [0];
+        end if;
+    end do;
+    p := [0];
+    for j from 1 to nops(b) do
+        p := Addition(p,C[j]);
+    end do;
+    return p;
+end proc:
+AreRelPrime := proc(a::integer, b::integer)
+    if igcd(a,b) = 1 then
+        return true;
+    else
+        return false;
+    end if;
+end proc:
+ArePairwisePrime := proc(A::list(integer))
+    local n, i, j;
+    n := nops(A);
+    for i from 1 to n-1 do
+        for j from i+1 to n do
+            if gcd(A[i],A[j]) <> 1 then
+                return false;
+            end if;
+        end do;
+    end do;
+    return true;
+end proc:
+CRTheorem := proc(a::list(integer),m::list(posint))
+    local P, M, y, i, x;
+    if not nops(a) = nops(m) then
+        error "Lists must be the same length.";
+    end if;
+    if not ArePairwisePrime(m) then
+        error "Moduli must be pairwise relatively prime.";
+    end if;
+    P := mul(m[i],i=1..nops(m));
+    M := table();
+    y := table();
+    for i from 1 to nops(m) do
+        M[i] := P/m[i];
+        y[i] := M[i]^(-1) mod m[i];
+    end do;
+    x := add(a[i]*M[i]*y[i],i=1..nops(m));
+    return x mod P;
+end proc:
+FindPseudoprimes := proc(b::posint, max::posint)
+    local PList, n;
+    PList := [];
+    for n from 3 to max by 2 do
+        if (b &^ (n-1) mod n) = 1 then
+            if not isprime(n) then
+                PList := [op(PList),n];
+            end if;
+        end if;
+    end do;
+    return PList;
+end proc:
+AllPrimRoots := proc(n::posint)
+    local L, x;
+    uses NumberTheory;
+    L := [];
+    x := 0;
+    try
+        do
+            x := PrimitiveRoot(n,greaterthan=x);
+            L := [op(L),x];
+        end do;
+    catch:
+        return L;
+    end try;
+end proc:
+DisplayPowers := proc(p::prime)
+    local r, x, L;
+    for r from 1 to p-1 do
+        L := [r];
+        x := r;
+        while x <> 1 do
+            x := x * r mod p;
+            L := [op(L),x];
+        end do;
+        print(r,L);
+    end do;
+end proc:
+PrintRecords := proc()
+    local i;
+    global studentRecords;
+    for i from 1 to 57 do
+        if studentRecords[i] <> 0 then
+            print(i,entries(studentRecords[i]));
+        end if;
+    end do;
+end proc:
+Store := proc(id::integer,gpa::float)
+    local hash, i, newrecord;
+    global studentRecords;
+    newrecord := table(["ID"=id,"GPA"=gpa]);
+    for i from 0 to 56 do
+        hash := calculateHash(id + i);
+        if studentRecords[hash] = 0 then
+            break;
+        end if;
+    end do;
+    studentRecords[hash] := newrecord;
+    return NULL;
+end proc:
+Retrieve := proc(id::integer)
+    local hash, i;
+    global studentRecords;
+    for i from 0 to 56 do
+        hash := calculateHash(id + i);
+        if studentRecords[hash] = 0 then
+            return FAIL;
+        end if;
+        if studentRecords[hash]["ID"] = id then
+            return eval(studentRecords[hash]);
+        end if;
+    end do;
+    return FAIL;
+end proc:
+randomIDs := proc(n::posint)
+    local S, m, a, c, x;
+    S := NULL;
+    m := 8999;
+    a := 57;
+    c := 328;
+    x := modp(floor(time[real]()*1000),m);
+    from 1 to n do
+        x := modp(a*x+c,m);
+        S := S,x+1000;
+    end do;
+    return S;
+end proc:
+randomGPAs := proc(n::posint)
+    local S, m, a, x, gpa;
+    S := NULL;
+    m := 2^31 - 1;
+    a := 7^5;
+    x := modp(floor(time[real]()*1000),m);
+    from 1 to n do
+        x := modp(a*x,m);
+        gpa := convert((x/(m-1))*4,float,3);
+        S := S,gpa;
+    end do;
+    return S;
+end proc:
+checkISBN := proc(isbn::string)
+    local i, check;
+    check := modp(add(i*parse(isbn[i]),i=1..9),11);
+    if check = 10 then
+        return evalb(isbn[10] = "X");
+    else
+        return evalb(parse(isbn[10]) = check);
+    end if;
+end proc:
+StringToNums := proc(s::string)
+    local S;
+    uses StringTools;
+    global CharToNum;
+    S := Explode(UpperCase(s));
+    S := map(c -> CharToNum[c],S);
+    return S;
+end proc:
+NumsToString := proc(S::list)
+    local s;
+    global NumToChar;
+    s := map(c -> NumToChar[c],S);
+    s := Implode(s);
+    return s;
+end proc:
+AffineCipher := proc(s::string, a::integer, b::integer)
+    local S, T;
+    S := StringToNums(s);
+    T := map(p -> modp(a*p+b,27),S);
+    return NumsToString(T);
+end proc:
+GenerateKeys := proc(p::prime, q::prime)
+    local n, phin, e, d;
+    e := 13;
+    n := p * q;
+    phin := (p - 1) * (q - 1);
+    d := modp(e^(-1),phin);
+    return [[n,e],[n,d]];
+end proc:
+RSA := proc(key::[posint,posint], msg::list(posint))
+    local n, e, C;
+    n := key[1];
+    e := key[2];
+    C := map(m -> modp(m &^ e,n),msg);
+    return C;
+end proc:
+CantorExpression := proc(a::posint)
+    local A, n, y;
+    A := [];
+    n := 1;
+    y := a;
+    while y <> 0 do
+        A := [op(A),modp(y,n+1)];
+        y := (y-A[n])/(n+1);
+        n := n+1;
+        end do;
+    return A;
+end proc:
+CheckMersenne := proc(max::posint)
+    local p, L;
+    p := 2;
+    L := [];
+    while p <= max do
+        if isprime(2^p-1) then
+            L := [op(L),p];
+        end if;
+        p := nextprime(p);
+    end do;
+    return L;
+end proc:
+CE5 := proc(max::posint)
+    local n, L;
+    L := [];
+    for n from 1 to max do
+        if isprime(n^2+1) then
+            L := [op(L),n^2+1];
+        end if;
+    end do;
+    return L;
+end proc:
+MakePostage := proc(A::posint,B::posint,postage::posint)
+    local a, b;
+    for a from 0 to floor(postage/A) do
+        for b from 0 to floor(postage/B) do
+            if A*a + B*b = postage then
+                return [a,b];
+            end if;
+        end do;
+    end do;
+    return FAIL;
+end proc:
+PostageBasis := proc(A::posint,B::posint,minpost::posint)
+    local small, postList, post, R;
+    small := min(A,B);
+    postList := [];
+    for post from minpost to (minpost + small - 1) do
+        R := MakePostage(A,B,post);
+        if R <> FAIL then
+            postList := [op(postList),post=R];
+        else
+            return false;
+        end if;
+    end do;
+    return postList;
+end proc:
+F := proc(n::nonnegint)
+    option remember;
+    F(n-1) + F(n-2);
+end proc:
+gR := proc(n::nonnegint)
+    option remember;
+    2*gR(n-1) + 3*gR(n-2);
+end proc:
+gF := proc(n::nonnegint)
+    2*gF(n-1) + 3*gF(n-2);
+end proc:
+A := proc(m::nonnegint,n::nonnegint)
+    option remember;
+    if n=0 and m>0 then
+        return A(m-1,n)+1;
+    else
+        return A(m,n-1)+n;
+    end if;
+end proc:
+recurseS := proc(S::set)
+    local x, y, T;
+    T := S;
+    for x in S do
+        for y in S do
+            T := T union {x + y};
+        end do;
+    end do;
+    return T;
+end proc:
+buildStrings := proc(S::set,A::set)
+    local T, w, x;
+    T := S;
+    for w in T do
+        for x in A do
+            T := T union {cat(w,x)};
+        end do;
+    end do;
+    return T;
+end proc:
+AllStrings := proc(A::set,n::posint)
+    local S;
+    S := {""};
+    from 1 to n do
+        S := buildStrings(S,A);
+    end do;
+    return S;
+end proc:
+power1 := proc(b::integer,n::nonnegint,m::posint)
+    if n=0 then
+        return 1;
+    else
+        return modp(b * power1(b,n-1,m),m);
+    end if;
+end proc:
+`^`(3,6) mod 7;
+power2 := proc(b::integer,n::nonnegint,m::posint)
+    if n=0 then
+        return 1;
+    elif type(n,even) then
+        return modp(power2(b,n/2,m)^2,m);
+    else
+        return modp(modp(power2(b,floor(n/2),m)^2,m)*b,m);
+    end if;
+end proc:
+factorialR := proc(n::nonnegint)
+    if n=0 then
+        return 1;
+    else
+        return n * factorialR(n-1);
+    end if;
+end proc:
+factorialI := proc(n::nonnegint)
+    local f, i;
+    f := 1;
+    for i from 1 to n do
+        f := f * i;
+    end do;
+    return f;
+end proc:
+mergesort := proc(L::list(integer))
+    local m, L1, L2;
+    if nops(L) > 1 then
+        m := floor(nops(L)/2);
+        L1 := L[1..m];
+        L2 := L[(m+1)..-1];
+        return merge(mergesort(L1),mergesort(L2));
+    else
+        return L;
+    end if;
+end proc:
+merge := proc(l1::list(integer),l2::list(integer))
+    local L, L1, L2;
+    L1 := l1;
+    L2 := l2;
+    L := [];
+    while L1 <> [] and L2 <> [] do
+        if L1[1] < L2[1] then
+            L := [op(L),L1[1]];
+            L1 := L1[2..-1];
+        else
+            L := [op(L),L2[1]];
+            L2 := L2[2..-1];
+        end if;
+        if L1 = [] then
+            L := [op(L),op(L2)];
+            L2 := [];
+        elif L2 = [] then
+            L := [op(L),op(L1)];
+            L1 := [];
+        end if;
+    end do;
+    return L;
+end proc:
+merge := proc(l1::list(integer),l2::list(integer))
+    local L, L1, L2;
+    L1 := l1;
+    L2 := l2;
+    L := [];
+    while L1 <> [] and L2 <> [] do
+        if L1[1] < L2[1] then
+            L := [op(L),L1[1]];
+            L1 := L1[2..-1];
+        else
+            L := [op(L),L2[1]];
+            L2 := L2[2..-1];
+        end if;
+        if L1 = [] then
+            L := [op(L),op(L2)];
+            L2 := [];
+        elif L2 = [] then
+            L := [op(L),op(L1)];
+            L1 := [];
+        end if;
+    end do;
+    return L;
+end proc:
+mergesort := proc(L::list(integer))
+    local m, L1, L2;
+    if nops(L) > 1 then
+        m := floor(nops(L)/2);
+        L1 := L[1..m];
+        L2 := L[(m+1)..-1];
+        return merge(mergesort(L1),mergesort(L2));
+    else
+        return L;
+    end if;
+end proc:
+buildWFFs := proc(S::set)
+    local T, f, g, o;
+    T := S;
+    for f in S do
+        T := T union {cat("(-",f,")")};
+    end do;
+    for o in ["+","*","/","-"] do
+        for f in S do
+            for g in S do
+                T := T union {cat("(",f,o,g,")")};
+            end do;
+        end do;
+    end do;
+    return T;
+end proc:
+AllWFFs := proc(m::posint)
+    local S;
+    S := {"x","y","z"};
+    from 1 to m do
+        S := buildWFFs(S);
+    end do;
+    return S;
+end proc:
+countSymbols := proc(WFF::string)
+    local count, i;
+    count := length(WFF);
+    for i in WFF do
+        if i="(" or i=")" then
+            count := count - 1;
+        end if;
+    end do;
+    return count;
+end proc:
+testFib5 := proc(n::posint)
+    local F;
+    uses combinat;
+    F := fibonacci(n);
+    if (n mod 5 = 0) and (F mod 5 <> 0) then
+        print(cat("n = ",n," is divisible by 5, but Fn = ",F," is not."));
+    elif (n mod 5 <> 0) and (F mod 5 = 0) then
+        print(cat("Fn = ",F," is divisible by 5, but n = ",n," is not."));
+    end if;
+end proc:
+testFibInfinite := proc()
+    global fibvalue;
+    for fibvalue from 1 do
+        testFib5(fibvalue):
+    end do:
+end proc:
+MakePostage := proc(A::posint,B::posint,postage::posint)
+    local a, b;
+    for a from 0 to floor(postage/A) do
+        for b from 0 to floor(postage/B) do
+            if A*a + B*b = postage then
+                return [a,b];
+            end if;
+        end do;
+    end do;
+    return FAIL;
+end proc:
+SubsetSumCount := proc(S::set(posint),target::posint)
+    uses combinat;
+    local count, P, s, x;
+    count := 0;
+    P := subsets(S);
+    while not P[finished] do
+        s := P[nextvalue]();
+        x := add(s);
+        if x < target then
+            count := count + 1;
+        end if;
+    end do;
+    return count;
+end proc:
+AddBit := proc(L::list)
+    local L0, L1;
+    L0 := [op(L),0];
+    if L[-2..-1]=[1,1] then
+        return L0;
+    else
+        L1 := [op(L),1];
+        return L0,L1;
+    end if;
+end proc:
+FindBitStrings := proc(n::nonnegint)
+    local S, s, T;
+    if n = 2 then
+        return {[0,0],[0,1],[1,0],[1,1]};
+    else
+        S := FindBitStrings(n-1);
+        T := {};
+        for s in S do
+            T := T union {AddBit(s)};
+        end do;
+        return T;
+    end if;
+end proc:
+FindSubSum := proc(L::list(posint),T::posint)
+    local A, i, j;
+    A := [L[1]];
+    for i from 2 to nops(L) do
+        A := [op(A),A[i-1]+L[i]];
+    end do;
+    for i from 1 to nops(L) do
+        if member(A[i]+T,A,'j') then
+            return i+1,j,L[i+1..j];
+        end if;
+    end do;
+    return FAIL;
+end proc:
+FindIncreasing := proc(S::list)
+    local piles, pointers, step, whichpile, p, iList;
+    piles := [];
+    pointers := table();
+    for step from 1 to nops(S) do
+        whichpile := 0;
+        for p from 1 to nops(piles) do
+            if S[step] < piles[p] then
+                whichpile := p;
+                break;
+            end if;
+        end do;
+        if whichpile = 0 then
+            piles := [op(piles),S[step]];
+        else
+            piles[whichpile] := S[step];
+        end if;
+        if whichpile = 1 or nops(piles) = 1 then
+            pointers[S[step]] := NULL;
+        elif whichpile = 0 then
+            pointers[S[step]] := piles[-2];
+        else
+            pointers[S[step]] := piles[whichpile-1];
+        end if;
+    end do;
+    iList := [piles[-1]];
+    while pointers[iList[1]] <> NULL do
+        iList := [pointers[iList[1]],op(iList)];
+    end do;
+    return iList;
+end proc:
+RotatePerm := proc(P::list)
+    return [op(2..-1,P),P[1]];
+end proc:
+CPEquals := proc(L1::list,L2::list)
+    local i, Lr;
+    if L1 = L2 then
+        return true;
+    end if;
+    Lr := L2;
+    for i from 1 to nops(L2)-1 do
+        Lr := RotatePerm(Lr);
+        if L1 = Lr then
+            return true;
+        end if;
+    end do;
+    return false;
+end proc:
+AllCP := proc(S::set,r::posint)
+    local allP, allCP, isnew, p;
+    allP := combinat[permute](S,r);
+    allCP := {allP[1]};
+    allP := allP[2..-1];
+    while allP <> [] do
+        isnew := true;
+        for p in allCP do
+            if CPEquals(allP[1],p) then
+                isnew := false;
+                break;
+            end if;
+        end do;
+        if isnew then
+            allCP := allCP union {allP[1]};
+        end if;
+        allP := allP[2..-1];
+    end do;
+    return allCP;
+end proc:
+BinomialF := proc(n::nonnegint, k::nonnegint)
+    return n!/(k!*(n-k)!);
+end proc:
+BinomialR := proc(n::nonnegint, k::nonnegint)
+    option remember;
+    if k=0 then
+        return 1;
+    elif 2*k > n then
+        return BinomialR(n,n-k);
+    else
+        return BinomialR(n-1,k-1) + BinomialR(n-1,k);
+    end if;
+end proc:
+printInts := proc(x::seq(integer))
+    print(x);
+end proc:
+distinguishable := proc(n::posint, k::seq(posint))
+    local discard, denomList, i;
+    if k = NULL then
+        return 1;
+    end if;
+    discard := n - add(i,i=[k]);
+    if discard < 0 then
+        error "first argument must be at least the sum of the others."
+    end if;
+    denomList := [k,discard];
+    denomList := map(factorial,denomList);
+    return n!/mul(i,i=denomList);
+end proc:
+weakcomposition := proc(n::posint,r::posint)
+    local minus1, strong, weak, C;
+    minus1 := x -> x-1;
+    strong := combinat[composition](n+r,r);
+    weak := {};
+    for C in strong do
+        weak := weak union {map(minus1,C)};
+    end do;
+    return weak;
+end proc:
+makeStirling2 := proc(n::posint, k::posint)
+    local A, k1boxes, kboxes, B, new, i;
+    if k = 1 then
+        return {{{$1..n}}};
+    end if;
+    if k > n then
+        return {};
+    end if;
+    A := {};
+    k1boxes := makeStirling2(n-1,k-1);
+    for B in k1boxes do
+        new := B union {{n}};
+        A := A union {new};
+    end do;
+    kboxes := makeStirling2(n-1,k);
+    for B in kboxes do
+        for i from 1 to k do
+            new := subsop(i=B[i] union {n},B);
+            A := A union {new};
+        end do;
+    end do;
+    return A;
+end proc:
+Interchange := proc(L::list, i::integer, j::integer)
+    local l, temp;
+    l := L;
+    temp := l[i];
+    l[i] := l[j];
+    l[j] := temp;
+    return l;
+end proc:
+nextpermutation := proc(A::list(posint))
+    local a, n, i, j, k, r, s;
+    a := A;
+    n := nops(a);
+    for i from 1 to n do
+        if a[i] > n then
+            error "Input must be a permutation of {1,2,...,n}.";
+        end if;
+    end do;
+    if a = [seq(n-i,i=0..(n-1))] then
+        return FAIL;
+    end if;
+    j := n - 1;
+    while a[j] > a[j+1] do
+        j := j - 1;
+    end do;
+    k := n;
+    while a[j] > a[k] do
+        k := k - 1;
+    end do;
+    a := Interchange(a,j,k);
+    r := n;
+    s := j + 1;
+    while r > s do
+        a := Interchange(a,r,s);
+        r := r - 1;
+        s := s + 1;
+    end do;
+    return a;
+end proc:
+permuteSet := proc(S::set,P::list(posint))
+    local L, M, makeeqn, eqns;
+    L := [op(S)];
+    M := [$1..nops(S)];
+    makeeqn := (a,b) -> a=b;
+    eqns := zip(makeeqn,M,L);
+    return subs(eqns,P);
+end proc:
+chooseRepetition := proc(n::posint, r::posint)
+    local L, i;
+    L := [seq(i$r,i=1..n)];
+    return combinat[choose](L,r);
+end proc:
+playoffWon := proc(L::list({1,2}),n::posint)
+    local collected;
+    collected := ListTools[Collect](L);
+    evalb(max(map(L->L[2],collected))>=n);
+end proc:
+allPlayoffs := proc(n::posint)
+    local outcomes, S, p, p1, p2;
+    outcomes := {};
+    S := [[1],[2]];
+    while S <> [] do
+        p := S[1];
+        S := S[2..-1];
+        p1 := [op(p),1];
+        p2 := [op(p),2];
+        if playoffWon(p1,n) then
+            outcomes := outcomes union {p1};
+        else
+            S := [op(S),p1];
+        end if;
+        if playoffWon(p2,n) then
+            outcomes := outcomes union {p2};
+        else
+            S := [op(S),p2];
+        end if;
+    end do;
+    return outcomes;
+end proc:
+HasPrimeSquare := proc(n::posint)
+    local c, facts, powers, x, e;
+    c := binomial(2*n,n);
+    facts := ifactors(c)[2];
+    powers := seq(x[2],x=facts);
+    for e in powers do
+        if e >= 2 then
+            return true;
+        end if;
+    end do;
+    return false;
+end proc:
+CheckPrimeSquares := proc()
+    global n;
+    for n from 1 do
+        if not HasPrimeSquare(n) then
+            print(cat("Found counterexample: ",n));
+        end if;
+    end do;
+end proc:
+Miller := proc(n::posint,b::posint)
+    local s, t, j;
+    s := 0;
+    t := n-1;
+    while modp(t,2) = 0 do
+        t := t/2;
+        s := s + 1;
+    end do;
+    if modp(b^t,n) = 1 then
+        return true;
+    end if;
+    for j from 0 to s-1 do
+        if modp(b^(2^j*t),n) = n-1 then
+            return true;
+        end if;
+    end do;
+    return false;
+end proc:
+MillerMC := proc(n::integer)::string;
+    local gen, b;
+    gen := rand(2..n-1);
+    from 1 to 30 do
+        b := gen();
+        if (not Miller(n,b)) then return "composite" end if;
+    end do;
+    return "prime";
+end proc:
+countMessages := proc(w::string,L::list)
+    local count, m, P;
+    count := 0;
+    for m in L do
+        P := StringTools[Words](m);
+        if (ListTools[Search](w,P) > 0) then
+            count := count + 1;
+        end if;
+    end do;
+    return count;
+end proc:
+PShakespeareGivenWord := proc(w::string)
+    local SCount,ECount,PWordGivenS,PWordGivenNotS;
+    global SPoems, EPoems;
+    SCount := nops(SPoems);
+    ECount := nops(EPoems);
+    PWordGivenS := countMessages(w,SPoems)/SCount;
+    PWordGivenNotS := countMessages(w,EPoems)/ECount;
+    return evalf(PWordGivenS/(PWordGivenS + PWordGivenNotS));
+end proc:
+PShakespeareGivenList := proc(L::list)
+    local SCount, ECount, PGivenS, w, PGivenNotS;
+    global SPoems, EPoems;
+    SCount := nops(SPoems);
+    ECount := nops(EPoems);
+    PGivenS := mul(countMessages(w,SPoems)/SCount,w in L);
+    PGivenNotS := mul(countMessages(w,EPoems)/ECount,w in L);
+    if (PGivenS + PGivenNotS <> 0) then
+        return evalf(PGivenS/(PGivenS + PGivenNotS));
+    else
+        return 0.5;
+    end if;
+end proc:
+PShakespeare := proc(testMessage::string,testSize::integer)
+    local testWordList;
+    testWordList := combinat[randcomb](StringTools[Words](testMessage),testSize);
+    return PShakespeareGivenList(testWordList);
+end proc:
+CardSimulate := proc(m::integer)
+    local currCollection, i, count, tempCard, cardGen;
+    currCollection := [0$m];
+    count := 0;
+    cardGen := rand(1..m);
+    while add(currCollection) < m do
+        tempCard := cardGen();
+        count := count + 1;
+        currCollection[tempCard] := 1;
+    end do;
+    return count;
+end proc:
+lottery := proc(n::posint)
+    local total;
+    total := combinat[numbcomb](n,6);
+    1.0 / total;
+end proc:
+lottery2 := proc(n::posint, k::posint)
+    local total;
+    total := combinat[numbcomb](n,k);
+    1.0 / total;
+end proc:
+RandPairs := proc(numberPairs::integer)
+    local listSize, i, tmp, randnums, count;
+    listSize := 2 * numberPairs;
+    randnums := [];
+    for i from 1 to listSize do
+        tmp := rand();
+        randnums := [op(randnums),tmp];
+    end do;
+    count := 0;
+    for i from 1 to listSize-1 by 2 do
+        if igcd(randnums[i],randnums[i+1]) = 1 then
+            count := count + 1;
+        end if;
+    end do;
+    evalf(count / numberPairs);
+end proc:
+Birthdays := proc(percentage::float)
+    local numPeople, curProb;
+    curProb := 0;
+    numPeople := 0;
+    while curProb < percentage do
+        numPeople := numPeople + 1;
+        curProb := 1 - (combinat[numbperm](366,numPeople)/366^numPeople);
+    end do;
+    return numPeople;
+end proc:
+Fibonacci := proc(n::posint)
+    option remember;
+    if n = 1 or n = 2 then
+        return 1;
+    end if;
+    Fibonacci(n-1) + Fibonacci(n-2);
+end proc:
+PrintMove := proc(src::string, dest::string)
+    printf("Move disk from peg %s to peg %s\134n",src,dest);
+end proc:
+TransferDisk := proc(src::string, via:: string, dest::string, ndisks::posint)
+    if ndisks = 1 then
+        PrintMove(src, dest);
+    else
+        TransferDisk(src, dest, via, ndisks - 1);
+        PrintMove(src, dest);
+        TransferDisk(via, src, dest, ndisks - 1);
+    end if;
+end proc:
+Hanoi := proc(ndisks::posint)
+    TransferDisk("A", "B", "C", ndisks);
+end proc:
+sortEnd := proc(a,b)
+    return a[2] < b[2];
+end proc:
+compatible := proc(talkList)
+    local p, j, jstart, i;
+    p := table();
+    for j from 1 to nops(talkList) do
+        jstart := talkList[j][1];
+        p[j] := 0;
+        for i from j-1 to 1 by -1 do
+            if talkList[i][2] <= jstart then
+                p[j] := i;
+                break;
+            end if;
+        end do;
+    end do;
+    return p;
+end proc:
+totalAttendance := proc(talkList,p)
+    local j, T;
+    T := table();
+    T[0] := 0;
+    for j from 1 to nops(talkList) do
+        T[j] := max(talkList[j][3] + T[p[j]],T[j-1]);
+    end do;
+    return T;
+end proc:
+maximumAttendees := proc(talkList)
+    local L, p, T;
+    L := sort(talkList,sortEnd);
+    p := compatible(L);
+    T := totalAttendance(L,p);
+    return T[nops(L)];
+end proc:
+RecSol2Distinct := proc(c, d, u, v)
+    local CERoots, alphas, alpha, beta, f, n, r;
+    CERoots := solve(r^2 - c*r-d,r);
+    alphas := solve({
+        alpha * CERoots[1] + beta * CERoots[2] = u,
+        alpha * CERoots[1]^2 + beta * CERoots[2]^2 = v
+    },{alpha,beta});
+    f := subs(alphas,alpha * CERoots[1]^n + beta * CERoots[2]^n);
+    return unapply(f,n);
+end proc:
+RecSolver2 := proc(c, d, u, v)
+    local CERoots, alphas, alpha, beta, f, n, r;
+    CERoots := solve(r^2 - c*r - d,r);
+    if (CERoots[1] = CERoots[2]) then
+        alphas := solve({
+            alpha * CERoots[1] + beta * CERoots[1] = u,
+            alpha * CERoots[1]^2 + 2 * beta * CERoots[1]^2 = v
+        },{alpha,beta});
+        f := subs(alphas,alpha * CERoots[1]^n + n * beta * CERoots[1]^n);
+    else
+        alphas := solve({
+            alpha * CERoots[1] + beta * CERoots[2] = u,
+            alpha * CERoots[1]^2 + beta * CERoots[2]^2 = v
+        },{alpha,beta});
+        f := subs(alphas,alpha * CERoots[1]^n + beta * CERoots[2]^n);
+    end if;
+    return unapply(f, n);
+end proc:
+binarysearch := proc(x::integer,A::list(integer))
+    local n, i, j, m, location;
+    n := nops(A);
+    i := 1;
+    j := n;
+    while i < j do
+        m := floor((i+j)/2);
+        if x > A[m] then
+            i := m + 1;
+        else
+            j := m;
+        end if;
+    end do;
+    if x = A[i] then
+        location := i;
+    else
+        location := 0;
+    end if;
+    return location;
+end proc:
+testSeating := proc(seating::list)
+    global twins;
+    local i, twinpair;
+    for i from 1 to 5 do
+        for twinpair in twins do
+            if ((seating[i] in twinpair) and (seating[i+1] in twinpair)) then
+                return false;
+            end if;
+        end do;
+    end do;
+    return true;
+end proc:
+ListSeatings := proc()
+    global twins;
+    local possibles, seating, OKseatings;
+    OKseatings := [];
+    possibles := combinat[permute](ListTools[Flatten](twins));
+    for seating in possibles do
+        if testSeating(seating) then
+            OKseatings := [op(OKseatings),seating];
+        end if;
+    end do;
+    return OKseatings;
+end proc:
+OntoFunctions := proc(m::posint,n::posint)
+    local k;
+    if m < n then
+        return 0;
+    end if;
+    return add((-1)^k * combinat[numbcomb](n,k) * (n - k)^m,k=0..n-1);
+end proc:
+FindFib := proc(target::integer)
+    local n;
+    n := 1;
+    while combinat[fibonacci](n) < target do
+        n := n + 1;
+    end do;
+    printf("The %dth Fibonacci number is %d", n, combinat[fibonacci](n));
+end proc:
+PrimeFib := proc()
+    global primefibs;
+    local i, temp;
+    primefibs := NULL;
+    for i from 1 do
+        temp := combinat[fibonacci](i);
+        if isprime(temp) then
+            primefibs := primefibs, temp;
+        end if;
+    end do;
+    return primefibs;
+end proc:
+DerProb := proc(n::posint)
+    local k;
+    return add((-1)^k * (1/k!),k=0..n);
+end proc:
+myFactorial := proc(n::posint)
+    if n = 1 then
+        return 1;
+    else
+        return n * myFactorial(n-1);
+    end if;
+end proc:
+DividesRelation := proc(A::set(integer))
+    local a, b, R;
+    R := {};
+    for a in A do
+        for b in A do
+            if (irem(b,a) = 0) then
+                R := R union {[a,b]};
+            end if;
+        end do;
+    end do;
+    return R;
+end proc:
+DivRel := proc(n::posint)
+    DividesRelation({$1..n});
+end proc:
+InverseRelation := proc(R::rel)
+    map(u -> [u[2],u[1]],R);
+end proc:
+FindDomain := proc(R::rel)
+    map(op,R);
+end proc:
+IsReflexive := proc(R::rel)
+    local a;
+    for a in FindDomain(R) do
+        if not ([a,a] in R) then
+            return false;
+        end if;
+    end do;
+    return true;
+end proc:
+IsSymmetric := proc(R::rel)
+    local u;
+    for u in R do
+        if not ([u[2],u[1]] in R) then
+            return false;
+        end if;
+    end do;
+    return true;
+end proc:
+IsAntisymmetric := proc(R::rel)
+    local u;
+    for u in R do
+        if (([u[2],u[1]] in R) and (u[1] <> u[2])) then
+            return false;
+        end if;
+    end do;
+    return true;
+end proc:
+IsTransitive := proc(R::rel)
+    local DomR, a, b, c;
+    DomR := FindDomain(R);
+    for a in DomR do
+        for b in DomR do
+            for c in DomR do
+                if (([a,b] in R) and ([b,c] in R) and not([a,c] in R)) then
+                    return false;
+                end if;
+            end do;
+        end do;
+    end do;
+    return true;
+end proc:
+ProjectRelation := proc(R::nrel, P::list(posint))
+    local u, S;
+    S := {};
+    for u in R do
+        S := S union {u[P]};
+    end do;
+    return S;
+end proc:
+JoinRelation := proc(R::nrel, S::nrel, p::posint)
+    local overlapR, overlapS, degreeR, i, u, isDone, x, joinElement, T;
+    T := {};
+    degreeR := nops(R[1]);
+    overlapR := [seq(degreeR - p + i, i=1..p)];
+    overlapS := [seq(i, i=1..p)];
+    for u in R do
+        x := u[overlapR];
+        i := 1;
+        isDone := false;
+        while i <= nops(S) and isDone = false do
+            if S[i][overlapS] = x then
+                joinElement := [op(u), op(S[i][(p+1)..-1])];
+                T := T union {joinElement};
+                isDone := true;
+            end if;
+            i := i + 1;
+        end do;
+    end do;
+    return T;
+end proc:
+RelToMatrix := proc(R::rel)
+    local u, M, domain;
+    domain := FindDomain(R);
+    M := Matrix(max(domain));
+    for u in R do
+        M[op(u)] := 1;
+    end do;
+    return M;
+end proc:
+IsReflexiveM := proc(M::Matrix)
+    local i, numrows, numcols;
+    numrows := LinearAlgebra[RowDimension](M);
+    numcols := LinearAlgebra[ColumnDimension](M);
+    if numrows <> numcols then
+        return false;
+    end if;
+    for i from 1 to numrows do
+        if M[i,i] = 0 then
+            return false;
+        end if;
+    end do;
+    return true;
+end proc:
+IsSymmetricM := proc(M::Matrix)
+    return LinearAlgebra[Equal](M,LinearAlgebra[Transpose](M));
+end proc:
+MakeIrreflexive := proc(R::rel)
+    local E, u;
+    E := {};
+    for u in R do
+        if u[1] <> u[2] then
+            E := E union {u};
+        end if;
+    end do;
+    return E;
+end proc:
+DrawRelation := proc(R::rel)
+    local IrrR, RevR, G, S;
+    IrrR := MakeIrreflexive(R);
+    RevR := InverseRelation(IrrR);
+    G := GraphTheory[Digraph](RevR);
+    S := GraphTheory[IsNetwork](G);
+    if S[1] = {} or S[2] = {} then
+        GraphTheory[DrawGraph](G);
+    else
+        GraphTheory[DrawNetwork](G);
+    end if;
+end proc:
+IsTransitiveG := proc(R::rel)
+    uses GraphTheory;
+    local G, D, i, j;
+    G := Digraph(MakeIrreflexive(R));
+    D := AllPairsDistance(G);
+    for i from 1 to LinearAlgebra[RowDimension](D) do
+        for j from 1 to LinearAlgebra[ColumnDimension](D) do
+            if D[i,j] > 1 and D[i,j] < infinity then
+                return false;
+            end if;
+        end do;
+    end do;
+    return true;
+end proc:
+reflexiveClosure := proc(M::Matrix)
+    local i, ans;
+    ans := LinearAlgebra[Copy](M);
+    for i from 1 to LinearAlgebra[ColumnDimension](M) do
+        ans[i,i] := 1;
+    end do;
+    return ans;
+end proc:
+symmetricClosure := proc(M::Matrix)
+    local i, j, ans;
+    ans := LinearAlgebra[Copy](M);
+    for i from 1 to LinearAlgebra[RowDimension](M) do
+        for j from 1 to LinearAlgebra[ColumnDimension](M) do
+            if ans[i,j] = 1 then
+                ans[j,i] := 1;
+            end if;
+        end do;
+    end do;
+    return ans;
+end proc:
+boolJoin := proc(A::'Matrix'({0,1}),B::'Matrix'({0,1}))
+    return LinearAlgebra[Zip](Bits[Or],A,B);
+end proc:
+BoolProduct := proc(A::'Matrix'({0,1}),B::'Matrix'({0,1}))
+    local m, k, n, C, i, j, c, p;
+    uses LinearAlgebra, Bits;
+    m := RowDimension(A);
+    k := ColumnDimension(A);
+    if k <> RowDimension(B) then
+        error "Dimension mismatch.";
+    end if;
+    n := ColumnDimension(B);
+    C := Matrix(m,n);
+    for i from 1 to m do
+        for j from 1 to n do
+            c := And(A[i,1],B[1,j]);
+            for p from 2 to k do
+                c := Or(c,And(A[i,p],B[p,j]));
+            end do;
+            C[i,j] := c;
+        end do;
+    end do;
+    return C;
+end proc:
+transitiveClosure := proc(M::Matrix({0,1}))
+    local A, B;
+    uses LinearAlgebra, Bits;
+    A := Copy(M);
+    B := Copy(M);
+    from 2 to RowDimension(M) do
+        A := BoolProduct(A,M);
+        B := boolJoin(B,A);
+    end do;
+    return B;
+end proc:
+Warshall := proc(M::Matrix)
+    local i, j, k, W, n;
+    uses LinearAlgebra, Bits;
+    n := ColumnDimension(M);
+    W := Copy(M);
+    for k from 1 to n do
+        for i from 1 to n do
+            for j from 1 to n do
+                W[i,j] := Or(W[i,j], And(W[i,k],W[k,j]));
+            end do;
+        end do;
+    end do;
+    return W;
+end proc:
+IsEquivalenceRelation := proc(R::rel);
+    evalb(IsReflexive(R) and IsSymmetric(R) and IsTransitive(R));
+end proc:
+makeMod4Rel := proc(n::posint)
+    local R, i, j;
+    R := {};
+    for i from 0 to n do
+        for j from 0 to n do
+            if modp(i-j,4) = 0 then
+                R := R union {[i,j]};
+            end if;
+        end do;
+    end do;
+    return R;
+end proc:
+EquivalenceClass := proc(R::rel, a::anything)
+    local u, S;
+    S := {};
+    for u in R do
+        if u[1] = a then
+            S := S union {u[2]};
+        end if;
+    end do;
+    return S;
+end proc:
+AllEquivalenceRelations := proc(A::set)
+    local C, AA, P, R, E;
+    C := combinat[cartprod]([A,A]);
+    AA := {};
+    while not C[finished] do
+        AA := AA union {C[nextvalue]()};
+    end do;
+    P := combinat[powerset](AA);
+    E := {};
+    for R in P do
+        if IsEquivalenceRelation(R) then
+            E := E union {R};
+        end if;
+    end do;
+    return E;
+end proc:
+`type/po` := proc(obj)
+   type(obj, rel) and IsReflexive(obj) and IsAntisymmetric(obj) and IsTransitive(obj);
+end proc:
+DivisorLattice := proc(n::posint)
+    DividesRelation(NumberTheory[Divisors](n));
+end proc:
+Covers := proc(R::po, x, y)
+    local z;
+    if x = y then
+        return false;
+    end if;
+    if not [x,y] in R then
+        return false;
+    end if;
+    for z in FindDomain(R) minus {x,y} do
+        if ([x,z] in R) and ([z,y] in R) then
+            return false;
+        end if;
+    end do;
+    return true;
+end proc:
+CoveringRelation := proc(R::po)
+    local C, u;
+    C := {};
+    for u in R do
+        if Covers(R, u[1], u[2]) then
+            C := C union {[u[1],u[2]]};
+        end if;
+    end do;
+    return C;
+end proc:
+HasseDiagram := proc(R::po)
+    local C, D;
+    C := InverseRelation(CoveringRelation(R));
+    D := GraphTheory[Digraph](C);
+    GraphTheory[DrawNetwork](D);
+end proc:
+MinimalElements := proc(R::po, S::set)
+    local M, s, t;
+    if S minus FindDomain(R) <> {} then
+        error "Set must be in the domain of the relation";
+    end if;
+    M := S;
+    for s in S do
+        for t in S minus {s} do
+            if [t,s] in R then
+                M := M minus {s};
+            end if;
+        end do;
+    end do;
+    return M;
+end proc:
+MaximalElements := proc(R::po, S::set)
+    MinimalElements(InverseRelation(R),S);
+end proc:
+IsUpperBound := proc(R::po, S::set, u::anything)
+    local s;
+    if not u in FindDomain(R) then
+        error "Element is not in the domain of the relation."
+    end if;
+    for s in S do
+        if not [s,u] in R then
+            return false;
+        end if;
+    end do;
+    return true;
+end proc:
+UpperBounds := proc(R::po, S::set)
+    local U, DomR, d;
+    DomR := FindDomain(R);
+    if S minus DomR <> {} then
+        error "set must be contained in the domain of the relation."
+    end if;
+    U := {};
+    for d in DomR do
+        if IsUpperBound(R, S, d) then
+            U := U union {d};
+        end if;
+    end do;
+    return U;
+end proc:
+LeastUpperBound := proc(R::po, S::set)
+    local U, M;
+    U := UpperBounds(R,S);
+    M := MinimalElements(R,U);
+    if nops(M) <> 1 then
+        return NULL;
+    else
+        return op(M);
+    end if;
+end proc:
+IsLattice := proc(R::po)
+    HasLUBs(R) and HasGLBs(R);
+end proc:
+HasLUBs := proc(R::po)
+    local DomR, a, b;
+    DomR := FindDomain(R);
+    for a in DomR do
+        for b in DomR do
+            if LeastUpperBound(R, {a,b}) = NULL then
+                return false;
+            end if;
+        end do;
+    end do;
+    return true;
+end proc:
+TopSort := proc(R::po)
+    local S, a, T;
+    T := [];
+    S := FindDomain(R);
+    while S <> {} do
+        a := MinimalElements(R,S)[1];
+        S := S minus {a};
+        T := [op(T),a];
+    end do;
+    return T;
+end proc:
+AllRelations := proc(S::set)
+    local s, t, C;
+    C := {};
+    for s in S do
+        for t in S do
+            C := C union {[s,t]};
+        end do;
+    end do;
+    return combinat[powerset](C);
+end proc:
+CountTransitive := proc(n::posint)
+    local i, T, M, count;
+    count := 0;
+    for i from 0 to (2^(n^2) - 1) do
+        T := convert(i,base,2);
+        M := Matrix(n,n,T);
+        if LinearAlgebra[Equal](M,Warshall(M)) then
+            count := count + 1;
+        end if;
+    end do;
+    return count;
+end proc:
+Fp := proc(x,y,z)
+    return (x &and y) &or (y &and z) &or (z &and x);
+end proc:
+FormMinterm:=proc(row::list(truefalse),vars::list(symbol))
+    local mintermSeq, i;
+    uses Logic;
+    if nops(row) <> nops(vars) then
+        error "Incorrect number of variables";
+    end if;
+    mintermSeq := NULL;
+    for i from 1 to nops(row) do
+        if row[i] then
+            mintermSeq := mintermSeq,vars[i];
+        else
+            mintermSeq := mintermSeq, &not(vars[i]);
+        end if;
+    end do;
+    return &and(mintermSeq);
+end proc:
+BooleanFromTable := proc(T::set(list(truefalse)),V::list(symbol))
+    local mtSeq, row, mt;
+    uses Logic;
+    if T = {} then
+        return false;
+    end if;
+    mtSeq := NULL;
+    for row in T do
+        mt := FormMinterm(row,V);
+        mtSeq := mtSeq, mt;
+    end do;
+    return &or(mtSeq);
+end proc:
+DontCare := proc(T::set(list(truefalse)),DC::set(list(truefalse)),V::list(symbol))
+    local minExpr, minLength, S, s, nextExpr;
+    uses Logic;
+    S := combinat[subsets](DC);
+    s := S[nextvalue]();
+    minExpr := BooleanSimplify(BooleanFromTable(T,V));
+    minLength := length(minExpr);
+    while not S[finished] do
+        s := S[nextvalue]();
+        nextExpr:=BooleanSimplify(BooleanFromTable(T union s,V));
+        if length(nextExpr) < minLength then
+            minExpr := nextExpr;
+            minLength := length(nextExpr);
+        end if;
+    end do;
+    return minExpr;
+end proc:
+add3 := proc(x::evaln(integer))
+    x := eval(x) + 3;
+end proc:
+MTtoBitString := proc(minterm,variableList::list(symbol))
+    local MTList, i, Bitstring;
+    uses Logic;
+    MTList := [minterm];
+    i := 1;
+    while i <= nops(MTList) do
+        if op(0,MTList[i]) = `&and` then
+            MTList := subsop(i=op(MTList[i]),MTList);
+        else
+            i := i + 1;
+        end if;
+    end do;
+    Bitstring := [0 $ nops(variableList)];
+    for i from 1 to nops(variableList) do
+        if variableList[i] in MTList then
+            Bitstring[i] := 1;
+        elif `&not`(variableList[i]) in MTList then
+            Bitstring[i] := 0;
+        else
+            error "Unrecognized object in MTList.";
+        end if;
+    end do;
+    return Bitstring;
+end proc:
+DNFtoBitList := proc(dnfExpr,variableList::list(symbol))
+    local DNFList, i;
+    uses Logic;
+    DNFList := [dnfExpr];
+    i := 1;
+    while i <= nops(DNFList) do
+        if op(0,DNFList[i]) = `&or` then
+            DNFList := subsop(i=op(DNFList[i]),DNFList);
+        else
+            i := i + 1;
+        end if;
+    end do;
+    return map(MTtoBitString,DNFList,variableList);
+end proc:
+BitStringtoMT := proc(bitstring,variableList::list(symbol))
+    local varList, i;
+    uses Logic;
+    varList := variableList;
+    for i from 1 to nops(varList) do
+        if bitstring[i] = 0 then
+            varList[i] := &not(varList[i]);
+        elif bitstring[i] = "-" then
+            varList[i] := "-";
+        end if;
+    end do;
+    varList := subs("-"=NULL,varList);
+    return &and(op(varList));
+end proc:
+initCoverDict := proc(L::list)
+    local coverDict, i;
+    coverDict := table();
+    for i from 1 to nops(L) do
+        coverDict[L[i]] := {i};
+    end do;
+    return coverDict;
+end proc:
+sortGroups := proc(bitstringList)
+    local groupTable, max, j;
+    uses ListTools;
+    groupTable := Classify(bitstr -> Occurrences(1,bitstr), bitstringList);
+    max := nops(bitstringList[1]);
+    return tablemerge(table([seq(j={},j=0..max)]),groupTable);
+end proc:
+MergeBitstrings := proc(bit1::list,bit2::list)
+    local i, pos;
+    pos := 0;
+    for i from 1 to nops(bit1) do
+        if bit1[i] <> bit2[i] then
+            if pos = 0 then
+                pos := i;
+            else
+                return false;
+            end if;
+        end if;
+    end do;
+    return subsop(pos="-",bit1);
+end proc:
+NextBitListtry2 := proc(lastgroups)
+    local nextL, primeImps, n, A, B, a, b, m;
+    nextL := {};
+    primeImps := `union`(entries(lastgroups,nolist));
+    for n from 1 to max(indices(lastgroups)) do
+        A := lastgroups[n];
+        B := lastgroups[n-1];
+        for a in A do
+            for b in B do
+                m := MergeBitstrings(a,b);
+                if m <> false then
+                    nextL := nextL union {m};
+                    primeImps := primeImps minus {a,b};
+                end if;
+            end do;
+        end do;
+    end do;
+    nextL := [op(nextL)];
+    return nextL,primeImps;
+end proc:
+NextBitList := proc(lastgroups,coverDict)
+    local nextL, primeImps, n, A, B, a, b, m;
+    nextL := {};
+    primeImps := `union`(entries(lastgroups,nolist));
+    for n from 1 to max(indices(lastgroups)) do
+        A := lastgroups[n];
+        B := lastgroups[n-1];
+        for a in A do
+            for b in B do
+                m := MergeBitstrings(a,b);
+                if m <> false then
+                    nextL := nextL union {m};
+                    primeImps := primeImps minus {a,b};
+                    coverDict[m] := coverDict[a] union coverDict[b];
+                end if;
+            end do;
+        end do;
+    end do;
+    nextL := [op(nextL)];
+    return nextL,primeImps;
+end proc:
+initCoverMatrix := proc(minterms,primeImps,coverDict)
+    local M, i, C, j;
+    M := Matrix(nops(primeImps),nops(minterms));
+    for i from 1 to nops(primeImps) do
+        C := coverDict[primeImps[i]];
+        for j in C do
+            M[i,j] := 1;
+        end do;
+    end do;
+    return M;
+end proc:
+UpdateCT := proc(newPI,coverTable::evaln,minterms::evaln,primeImps::evaln)
+    local newPIbits, numcols, covered, i, colList;
+    newPIbits := eval(primeImps)[newPI];
+    numcols:= LinearAlgebra[ColumnDimension](eval(coverTable));
+    covered := {};
+    for i from 1 to numcols do
+        if eval(coverTable)[newPI,i] = 1 then
+            covered := covered union {i};
+        end if;
+    end do;
+    colList := [op({$1..numcols} minus covered)];
+    coverTable := eval(coverTable)[[1..(newPI-1),(newPI+1)..-1],colList];
+    primeImps := subsop(newPI=NULL,eval(primeImps));
+    for i from nops(covered) to 1 by -1 do
+        minterms := subsop(covered[i]=NULL,eval(minterms));
+    end do;
+    return newPIbits;
+end proc:
+FindEssentials := proc(coverTable)
+    local essentials, i, j, rowhas1;
+    essentials := {};
+    for i from 1 to LinearAlgebra[ColumnDimension](coverTable) do
+        rowhas1 := 0;
+        for j from 1 to LinearAlgebra[RowDimension](coverTable) do
+            if coverTable[j,i] = 1 then
+                if rowhas1 = 0 then
+                    rowhas1 := j;
+                else
+                    rowhas1 := -1;
+                    break;
+                end if;
+            end if;
+        end do;
+        if rowhas1 > 0 then
+            essentials := essentials union {rowhas1};
+        end if;
+    end do;
+    return essentials;
+end proc:
+findBestImp := proc(coverTable)
+    local maxCoverage, bestImp, i, j, sum;
+    maxCoverage := 0;
+    bestImp := 0;
+    for i from 1 to LinearAlgebra[RowDimension](coverTable) do
+        sum := 0;
+        for j from 1 to LinearAlgebra[ColumnDimension](coverTable) do
+            sum := sum + coverTable[i,j];
+        end do;
+        if sum > maxCoverage then
+            maxCoverage := sum;
+            bestImp := i;
+        end if;
+    end do;
+    return bestImp;
+end proc:
+QuineMcCluskey := proc(F,variables)
+    local Fbits, FbitsL, coverageDict, groups, primes, i, allprimeImps, j, coverageTable, essentialPIs, minBits, nextPI;
+    uses Logic;
+    Fbits := DNFtoBitList(F,variables);
+    coverageDict := initCoverDict(Fbits);
+    i := 0;
+    FbitsL[0] := Fbits;
+    while FbitsL[i] <> [] do
+        i := i + 1;
+        groups[i] := sortGroups(FbitsL[i-1]);
+        FbitsL[i],primes[i]:=NextBitList(groups[i],coverageDict);
+    end do;
+    allprimeImps := {};
+    for j from 1 to i do
+        allprimeImps := allprimeImps union primes[j];
+    end do;
+    allprimeImps := [op(allprimeImps)];
+    coverageTable := initCoverMatrix(Fbits,allprimeImps,coverageDict);
+    essentialPIs := FindEssentials(coverageTable);
+    minBits := [];
+    for i from nops(essentialPIs) to 1 by -1 do
+        minBits := [op(minBits),UpdateCT(essentialPIs[i],coverageTable,Fbits,allprimeImps)];
+    end do;
+    while LinearAlgebra[ColumnDimension](coverageTable) > 0 do
+        nextPI := findBestImp(coverageTable);
+        minBits := [op(minBits),UpdateCT(nextPI,coverageTable,Fbits,allprimeImps)];
+    end do;
+    return &or(op(map(BitStringtoMT,minBits,variables)));
+end proc:
+UpdateCT := proc(newPI,coverTable::evaln,minterms::evaln,primeImps::evaln)
+    local newPIbits, numcols, covered, i, colList;
+    global countUpdateCT;
+    countUpdateCT := countUpdateCT + 1;
+    newPIbits := eval(primeImps)[newPI];
+    numcols:= LinearAlgebra[ColumnDimension](eval(coverTable));
+    covered := {};
+    for i from 1 to numcols do
+        if eval(coverTable)[newPI,i] = 1 then
+            covered := covered union {i};
+        end if;
+    end do;
+    colList := [op({$1..numcols} minus covered)];
+    coverTable := eval(coverTable)[[1..(newPI-1),(newPI+1)..-1],colList];
+    primeImps := subsop(newPI=NULL,eval(primeImps));
+    for i from nops(covered) to 1 by -1 do
+        minterms := subsop(covered[i]=NULL,eval(minterms));
+    end do;
+    return newPIbits;
+end proc:
+FormWords := proc(V,T,S,P,wordlimit)
+    local N, L, A, count, curString, D, i, s, d;
+    N := V minus T;
+    L := {};
+    A := [[S]];
+    count := 0;
+    while count <= wordlimit and A <> [] do
+        curString := A[1];
+        A := A[2..-1];
+        D := [];
+        for i from 1 to nops(curString) do
+            if curString[i] in N then
+                for s in P[curString[i]] do
+                    D := [op(D),subsop(i=op(s),curString)];
+                end do;
+            end if;
+        end do;
+        for d in D do
+            if {op(d)} subset T then
+                L := L union {cat(op(d))};
+                count := count + 1;
+            else
+                A := [op(A),d];
+            end if;
+        end do;
+    end do;
+    return L;
+end proc:
+MachineWithOutput := proc(transTable::table,inString::list)
+    local curState, outString, i;
+    curState := 0;
+    outString := [0 $ nops(inString)];
+    for i from 1 to nops(inString) do
+        outString[i] := transTable[curState,inString[i]][2];
+        curState := transTable[curState,inString[i]][1];
+    end do;
+    return outString;
+end proc:
+SetCat := proc(A::set,B::set)
+    local C, x, y;
+    C := {};
+    for x in A do
+        for y in B do
+            C := C union {[op(x),op(y)]};
+        end do;
+    end do;
+    return C;
+end proc:
+SetPow := proc(A::set,k::nonnegint)
+    if k=0 then
+        return {[]};
+    else
+        return SetCat(SetPow(A,k-1),A);
+    end if;
+end proc:
+Kleene := proc(A::set,n::posint)
+    local K, x, Ak;
+    K := {[]};
+    for x in A do
+        K := K union {[op(x)]};
+    end do;
+    Ak := K;
+    from 2 to n do
+        Ak := SetCat(Ak,A);
+        K := K union Ak;
+    end do;
+    return K;
+end proc:
+ExtendedTransition := proc(state,input,transFunc::table)
+    local curState, i;
+    curState := state;
+    for i from 1 to nops(input) do
+        curState := transFunc[curState,input[i]];
+    end do;
+    return curState;
+end proc:
+IsRecognized := proc(x,transFunc::table,init,final::set)
+    local endState;
+    endState := ExtendedTransition(init,x,transFunc);
+    return evalb(endState in final);
+end proc:
+FindLanguage := proc(transFunc::table,init,final::set,A::set,n::posint)
+    local An;
+    An := Kleene(A,n);
+    return select(IsRecognized,An,transFunc,init,final);
+end proc:
+MakeDeterministic := proc(transFunc::table,Iset::set,init,final::set)
+    local newTable, S, T, state, i, s, x, newfinal;
+    newTable := table();
+    S := {};
+    T := {{init}};
+    while T <> {} do
+        state := T[1];
+        T := T minus {state};
+        S := S union {state};
+        for i in Iset do
+            x := {};
+            for s in state do
+                x := x union transFunc[s,i];
+            end do;
+            newTable[state,i] := x;
+            if not(x in S) then
+                T := T union {x};
+            end if;
+        end do;
+    end do;
+    newfinal := {};
+    for state in S do
+        if state intersect final <> {} then
+            newfinal := newfinal union {state};
+        end if;
+    end do;
+    return newTable,{init},newfinal;
+end proc:
+CatAutomata := proc(Atable,Astart,Afinal,Btable,Bstart,Bfinal,Iset)
+    local ABtable, ABstart, ABfinal, i;
+    ABstart := 10*Astart + 1;
+    ABfinal := map(f->10*f+2,Bfinal);
+    if (Astart in Afinal) and (Bstart in Bfinal) then
+        ABfinal := ABfinal union {ABstart};
+    end if;
+    ABtable := table();
+    for i in indices(Atable) do
+        ABtable[10*i[1]+1,i[2]] := map(f->10*f+1,Atable[op(i)]);
+    end do;
+    for i in indices(Btable) do
+        ABtable[10*i[1]+2,i[2]] := map(f->10*f+2,Btable[op(i)]);
+    end do;
+    for i in indices(Atable) do
+        if Atable[op(i)] intersect Afinal <> {} then
+            ABtable[10*i[1]+1,i[2]] := ABtable[10*i[1]+1,i[2]] union {Bstart*10+2};
+        end if;
+    end do;
+    if (Astart in Afinal) then
+        for i in indices(Btable) do
+            if i[1] = 0 then
+                ABtable[1,i[2]] := ABtable[1,i[2]] union map(f->10*f+2,Btable[op(i)]);
+            end if;
+        end do;
+    end if;
+    return ABtable,Iset,ABstart,ABfinal;
+end proc:
+TuplesToTable := proc(S::set)
+    local T, x;
+    T := table();
+    for x in S do
+        T[x[1],x[2]] := x[3..5];
+    end do;
+    return T;
+end proc:
+Turing := proc(f::table,T::list,init)
+    local pos, state, tape, domain, Y;
+    pos := 1;
+    state := init;
+    tape := T;
+    domain := {indices(f)};
+    while [state,tape[pos]] in domain do
+        Y:= f[state,tape[pos]];
+        state := Y[1];
+        tape[pos] := Y[2];
+        if pos=1 and Y[3]='L' then
+            tape := ['B',op(tape)];
+        elif pos=nops(tape) and Y[3]='R' then
+            tape := [op(tape),'B'];
+            pos := pos + 1;
+        elif Y[3]='L' then
+            pos := pos - 1;
+        else
+            pos := pos + 1;
+        end if;
+    end do;
+    return tape,state;
+end proc:
+VerboseTuring := proc(f::table,T::list,init)
+    local pos, state, tape, domain, Y, displayTape;
+    pos := 1;
+    state := init;
+    tape := T;
+    domain := {indices(f)};
+    displayTape := tape;
+    displayTape[pos] := cat(`*`,tape[pos]);
+    print(displayTape,state);
+    while [state,tape[pos]] in domain do
+        Y:= f[state,tape[pos]];
+        state := Y[1];
+        tape[pos] := Y[2];
+        if pos=1 and Y[3]='L' then
+            tape := ['B',op(tape)];
+        elif pos=nops(tape) and Y[3]='R' then
+            tape := [op(tape),'B'];
+            pos := pos + 1;
+        elif Y[3]='L' then
+            pos := pos - 1;
+        else
+            pos := pos + 1;
+        end if;
+        displayTape := tape;
+        displayTape[pos] := cat(`*`,tape[pos]);
+        print(displayTape,state);
+    end do;
+    return tape, state;
+end proc:
+UnaryTape := proc(a::nonnegint,b::nonnegint)
+    return [1$(a+1),"*",1$(b+1)];
+end proc:
+ExtendedTransitionND := proc(states,input,transFunc)
+    local curStates, i, s, newStates;
+    curStates := states;
+    for i from 1 to nops(input) do
+        newStates := {};
+        for s in curStates do
+            newStates := newStates union transFunc[s,input[i]];
+        end do;
+        curStates := newStates;
+    end do;
+    return curStates;
+end proc:
+IsRecognizedND := proc(x,transFunc,init,final)
+    local endStates;
+    endStates := ExtendedTransitionND({init},x,transFunc);
+    return evalb(endStates intersect final <> {});
+end proc:
+FindLanguageND := proc(transFunc,init,final,A,n)
+    local An, x, L;
+    An := Kleene(A,n);
+    L := {};
+    for x in An do
+        if IsRecognizedND(x,transFunc,init,final) then
+            L := L union {x};
+        end if;
+    end do;
+    return L;
+end proc:
+MakeTable := proc(t::list)
+    local T, j;
+    T := table();
+    for j from 1 to 4 do
+        T[op(dom[j])] := t[j];
+    end do;
+    return T;
+end proc:
+BeaverTuring := proc(f::table,maxstep)
+    local pos, state, tape, domain, Y, numsteps;
+    pos := 1;
+    state := 0;
+    tape := ['B'];
+    domain := {indices(f)};
+    numsteps := 0;
+    while [state,tape[pos]] in domain and numsteps < maxstep do
+        Y:= f[state,tape[pos]];
+        state := Y[1];
+        tape[pos] := Y[2];
+        if pos=1 and Y[3]='L' then
+            tape := ['B',op(tape)];
+        elif pos=nops(tape) and Y[3]='R' then
+            tape := [op(tape),'B'];
+            pos := pos + 1;
+        elif Y[3]='L' then
+            pos := pos - 1;
+        else
+            pos := pos + 1;
+        end if;
+        numsteps := numsteps + 1;
+    end do;
+    if numsteps < maxstep then
+        return ListTools[Occurrences](1,tape);
+    else
+        return -1;
+    end if;
+end proc:
